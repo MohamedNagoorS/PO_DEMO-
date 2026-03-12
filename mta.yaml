@@ -29,15 +29,7 @@ modules:
     requires:
       - name: PO-db
       - name: PO-auth
-  - name: PO-ui
-    type: html5
-    path: app/purchaseorderapp
-    build-parameters:
-      builder: custom
-      commands:
-        - npm install
-        - npm run build
-      build-result: dist
+
 
   - name: PO-approuter
     type: approuter.nodejs
