@@ -1,0 +1,250 @@
+{
+    "namespace": "purchaseOrderManagement",
+    "entities": [
+        {
+            "name": "PurchaseOrders",
+            "label": "Purchase Order",
+            "associations": [
+                {
+                    "name": "Supplier",
+                    "target": "Suppliers",
+                    "multiplicity": "one"
+                }
+            ],
+            "labelPlural": "Purchase Orders",
+            "elements": [
+                {
+                    "name": "ID",
+                    "type": "UUID",
+                    "key": true,
+                    "label": ""
+                },
+                {
+                    "name": "purchaseOrdersID",
+                    "type": "Integer",
+                    "label": "ID",
+                    "additionalInfo": "Primary key for PurchaseOrders",
+                    "essentialElement": true,
+                    "semanticKey": true
+                },
+                {
+                    "name": "supplierName",
+                    "type": "String(50)",
+                    "label": "Supplier Name",
+                    "additionalInfo": "Name of the supplier associated with the purchase order",
+                    "key": false,
+                    "essentialElement": false
+                },
+                {
+                    "name": "productName",
+                    "type": "String(50)",
+                    "label": "Product Name",
+                    "additionalInfo": "Name of the product in the purchase order",
+                    "key": false,
+                    "essentialElement": false
+                },
+                {
+                    "name": "quantity",
+                    "type": "Integer",
+                    "label": "Quantity",
+                    "additionalInfo": "Quantity of the product ordered",
+                    "key": false,
+                    "essentialElement": true
+                },
+                {
+                    "name": "price",
+                    "type": "Decimal",
+                    "label": "Price",
+                    "additionalInfo": "Price per unit of the product",
+                    "key": false,
+                    "essentialElement": true
+                },
+                {
+                    "name": "totalAmount",
+                    "type": "Decimal",
+                    "label": "Total Amount",
+                    "additionalInfo": "Calculated field: quantity * price",
+                    "key": false,
+                    "essentialElement": false
+                },
+                {
+                    "name": "status",
+                    "type": "String(20)",
+                    "label": "Status",
+                    "additionalInfo": "Status of the purchase order: Created, Approved, Rejected",
+                    "key": false,
+                    "essentialElement": true,
+                    "values": [
+                        "Created",
+                        "Approved",
+                        "Rejected"
+                    ],
+                    "hasFixedValuesList": true,
+                    "hasColorsOrCriticality": true,
+                    "reason": "The 'status' property of a purchase order can be considered good or bad based on its values. 'Approved' is generally positive, 'Rejected' is negative, and 'Created' can be seen as neutral or critical depending on the context.",
+                    "mapping": [
+                        {
+                            "value": "Created",
+                            "colorOrCriticality": "neutral",
+                            "reason": "'Created' is a neutral state indicating the order has been initiated but not yet processed."
+                        },
+                        {
+                            "value": "Approved",
+                            "colorOrCriticality": "positive",
+                            "reason": "'Approved' is a positive state indicating the order has been accepted and is ready for fulfillment."
+                        },
+                        {
+                            "value": "Rejected",
+                            "colorOrCriticality": "negative",
+                            "reason": "'Rejected' is a negative state indicating the order has been declined and will not be processed."
+                        }
+                    ],
+                    "criticalities": [
+                        0,
+                        3,
+                        1
+                    ]
+                },
+                {
+                    "name": "createdAt",
+                    "type": "Timestamp",
+                    "label": "Created At",
+                    "additionalInfo": "Timestamp when the purchase order was created",
+                    "key": false,
+                    "essentialElement": true
+                }
+            ]
+        },
+        {
+            "name": "Suppliers",
+            "label": "Supplier",
+            "associations": [],
+            "labelPlural": "Suppliers",
+            "elements": [
+                {
+                    "name": "ID",
+                    "type": "UUID",
+                    "key": true,
+                    "label": ""
+                },
+                {
+                    "name": "suppliersID",
+                    "type": "Integer",
+                    "label": "ID",
+                    "additionalInfo": "Primary key for Suppliers",
+                    "essentialElement": true,
+                    "semanticKey": true
+                },
+                {
+                    "name": "name",
+                    "type": "String(50)",
+                    "label": "Name",
+                    "additionalInfo": "Name of the supplier",
+                    "key": false,
+                    "essentialElement": true
+                },
+                {
+                    "name": "email",
+                    "type": "String(50)",
+                    "label": "Email",
+                    "additionalInfo": "Email address of the supplier",
+                    "key": false,
+                    "essentialElement": false
+                },
+                {
+                    "name": "phone",
+                    "type": "String(20)",
+                    "label": "Phone",
+                    "additionalInfo": "Phone number of the supplier",
+                    "key": false,
+                    "essentialElement": false
+                }
+            ]
+        }
+    ],
+    "service": {
+        "name": "purchaseOrderManagementSrv",
+        "path": "srv/service.cds"
+    },
+    "applications": [
+        {
+            "pages": [
+                {
+                    "type": "ListReport",
+                    "entityType": "PurchaseOrders",
+                    "listReportContent": {
+                        "loadDataOnAppLaunch": "Enabled",
+                        "tables": [
+                            {
+                                "title": "Purchase Orders",
+                                "id": "purchaseOrdersTable",
+                                "baseEntityType": "PurchaseOrders",
+                                "columns": [
+                                    "purchaseOrdersID",
+                                    "supplierName",
+                                    "productName",
+                                    "quantity",
+                                    "price",
+                                    "totalAmount",
+                                    "status",
+                                    "createdAt"
+                                ]
+                            }
+                        ],
+                        "filters": [
+                            "supplierName",
+                            "status"
+                        ]
+                    }
+                },
+                {
+                    "type": "ObjectPage",
+                    "entityType": "PurchaseOrders",
+                    "objectPageContent": {
+                        "tableSectionAssociations": [],
+                        "sections": [
+                            {
+                                "title": "Purchase Order Details",
+                                "id": "purchaseOrderDetails",
+                                "isTableSection": false,
+                                "fields": [
+                                    "purchaseOrdersID",
+                                    "supplierName",
+                                    "productName",
+                                    "quantity",
+                                    "price",
+                                    "totalAmount",
+                                    "status",
+                                    "createdAt"
+                                ]
+                            },
+                            {
+                                "title": "Supplier Information",
+                                "id": "supplierInformation",
+                                "isTableSection": false,
+                                "fields": [
+                                    "Supplier/suppliersID",
+                                    "Supplier/name",
+                                    "Supplier/email",
+                                    "Supplier/phone"
+                                ]
+                            }
+                        ],
+                        "tabs": [
+                            {
+                                "id": "overviewTab",
+                                "title": "Overview",
+                                "subsections": [
+                                    "purchaseOrderDetails",
+                                    "supplierInformation"
+                                ]
+                            }
+                        ],
+                        "chartSections": []
+                    }
+                }
+            ],
+            "name": "purchaseOrderApp"
+        }
+    ]
+}

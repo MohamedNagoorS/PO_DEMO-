@@ -1,0 +1,31 @@
+{
+    "version": "0.2",
+    "floorplan": "FE_LROP",
+    "project": {
+        "name": "purchaseorderapp",
+        "targetFolder": "/home/user/projects/PO",
+        "title": "AI generated App purchaseorderapp",
+        "description": "AI generated App purchaseorderapp",
+        "ui5Version": "1.136.0",
+        "localUI5Version": "1.82.2",
+        "sapux": true
+    },
+    "service": {
+        "servicePath": "/odata/v4/purchase-order-management-srv/",
+        "capService": {
+            "projectPath": "/home/user/projects/PO",
+            "serviceName": "purchaseOrderManagementSrv",
+            "serviceCdsPath": "srv/service"
+        }
+    },
+    "entityConfig": {
+        "mainEntity": {
+            "entityName": "PurchaseOrders"
+        }
+    },
+    "projectTemplateType": "LIST_REPORT_OBJECT_PAGE",
+    "telemetryData": {
+        "generationSourceName": "AI Headless",
+        "generationSourceVersion": "1.20.4"
+    }
+}

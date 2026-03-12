@@ -1,0 +1,1637 @@
+2026-03-12T05:40:16.473Z [info] Project generation uses model: "gpt-4o", version: "latest"
+2026-03-12T05:40:16.474Z [info] 1/8: Generate CAP model using LLM
+2026-03-12T05:40:17.971Z [info] 
+==========LLM call for step "extractAppSkeleton":==========
+You help the user building a Fiori Elements application described in the user input.
+
+A Fiori Elements application typically starts with a ListReport page showing the data of the base entity of the application in a table.
+Details of a specific table row are shown in the ObjectPage. This first ObjectPage is therefore based on the base entity of the application.
+An ObjectPage can contain one or more table sections based on to-many associations of its entity type.
+The details of a table section row can be shown in an another ObjectPage based on the associations target entity.
+
+Your task is to find the entities (with their to-many associations) as well as the ObjectPages (with the to-many associations they use in table sections) described in the user input below.
+
+You must format your output as a JSON value that adheres to a given "JSON Schema" instance.
+
+"JSON Schema" is a declarative language that allows you to annotate and validate JSON documents.
+
+For example, the example "JSON Schema" instance {{"properties": {{"foo": {{"description": "a list of test words", "type": "array", "items": {{"type": "string"}}}}}}, "required": ["foo"]}}
+would match an object with one required property, "foo". The "type" property specifies "foo" must be an "array", and the "description" property semantically describes it as "a list of test words". The items within "foo" must be strings.
+Thus, the object {{"foo": ["bar", "baz"]}} is a well-formatted instance of this example "JSON Schema". The object {{"properties": {{"foo": ["bar", "baz"]}}}} is not well-formatted.
+
+Your output will be parsed and type-checked according to the provided schema instance, so make sure all fields in your output match the schema exactly and there are no trailing commas!
+
+Here is the JSON Schema instance your output must adhere to. Include the enclosing markdown codeblock:
+```json
+{
+  "type": "object",
+  "properties": {
+    "entities": {
+      "type": "array",
+      "description": "Define all entities and their to-many associations; entity properties will be determined later",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "UpperCamelCase, no spaces, plural, e.g. 'Orders'"
+          },
+          "label": {
+            "type": "string",
+            "description": "max two words, singular"
+          },
+          "associations": {
+            "type": "array",
+            "description": "Define to-many associations between entities",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "target": {
+                  "type": "string",
+                  "description": "Points to existing entity, value is entities.name"
+                },
+                "nameForReverseAssociation": {
+                  "type": "string",
+                  "description": "Name of the reverse to-one association in the target entity; required if target entity is same as source entity"
+                },
+                "multiplicity": {
+                  "type": "string",
+                  "enum": [
+                    "many",
+                    "one"
+                  ],
+                  "description": "Cardinality of the association"
+                }
+              },
+              "required": [
+                "name",
+                "target",
+                "multiplicity"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "labelPlural": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "label",
+          "associations",
+          "labelPlural"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "baseEntity": {
+      "type": "string",
+      "description": "base entity of ListReport page (if present) and first ObjectPage"
+    },
+    "noListReportPage": {
+      "type": "boolean",
+      "description": "true: no ListReport page will generated, e.g. for applications which start with an (input enabled) Object Page to enter data"
+    },
+    "objectPages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "entityType": {
+            "type": "string",
+            "description": "Entity that the ObjectPage is based on, the first ObjectPage is always based on base entity. There can at most be a single ObjectPage per entityType"
+          },
+          "tableSectionsAssociations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "to-many associations of page entity for table sections shown in the ObjectPage"
+          }
+        },
+        "required": [
+          "entityType"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "namespace": {
+      "type": "string",
+      "description": "lowerCamelCase, no spaces allowed"
+    },
+    "applicationName": {
+      "type": "string",
+      "description": "lowerCamelCase, no spaces allowed"
+    },
+    "userInputKind": {
+      "enum": [
+        "UserInterfaceFirst",
+        "DataModelFirst"
+      ],
+      "description": "use 'UserInterfaceFirst' if User input describes the app based on the user interface, i.e. how List Report and Object Pages should look like; use 'DataModelFirst' if User input describes the app based on its data model, i.e. its entities, their elements and associations"
+    }
+  },
+  "required": [
+    "entities",
+    "baseEntity",
+    "objectPages",
+    "namespace",
+    "applicationName",
+    "userInputKind"
+  ],
+  "additionalProperties": false
+}
+```
+
+Output ONLY the json contents and try to be as accurate as comprehensive as possible.
+
+<UserInput>
+Generate a full-stack SAP CAP application for Purchase Order Management using SAP Build Code and SAP BTP.
+
+Application Requirements:
+
+Architecture:
+
+* Use SAP CAP (Node.js)
+* Use SAP HANA Cloud as the database
+* Use an HDI container for persistence
+* Expose services using OData V4
+* Deployable to SAP BTP Cloud Foundry
+
+Database Model:
+Create the following entities:
+
+1. PurchaseOrders
+
+* ID (integer,key)
+* supplierName (String)
+* productName (String)
+* quantity (Integer)
+* price (Decimal)
+* totalAmount (calculated = quantity * price)
+* status (String: Created, Approved, Rejected)
+* createdAt (Timestamp)
+
+2. Suppliers
+
+* ID (integer)
+* name (String)
+* email (String)
+* phone (String)
+
+Add an association:
+PurchaseOrders → Supplier
+
+Backend Service:
+Create a service called PurchaseOrderService exposing:
+
+* READ PurchaseOrders
+* CREATE PurchaseOrders
+* UPDATE PurchaseOrders
+* DELETE PurchaseOrders
+* READ Suppliers
+
+Authorization (Role-Based Access Control):
+Use XSUAA for authentication.
+
+Define roles:
+
+Admin
+
+* Full access
+* Can create, update, delete purchase orders
+* Can view suppliers
+
+Manager
+
+* Can approve or reject purchase orders
+* Can view purchase orders
+
+Employee
+
+* Can create purchase orders
+* Can only view their own purchase orders
+
+Create xs-security.json with scopes and role templates.
+
+Add authorization annotations in CDS services to enforce role-based access.
+
+Frontend:
+Generate a SAP Fiori Elements application with:
+
+List Report Page
+
+* Displays Purchase Orders
+* Filter by Supplier and Status
+
+Object Page
+
+* View Purchase Order details
+* Create new Purchase Orders
+* Edit existing Purchase Orders
+
+Role Behavior:
+Admin → full access UI
+Manager → approve/reject actions visible
+Employee → only create and view own orders
+
+Use SAP Fiori UI5 and connect it to PurchaseOrderService.
+
+Deployment:
+Include:
+
+* mta.yaml
+* xs-security.json
+* HANA HDI container configuration
+* service bindings for HANA and XSUAA
+
+The generated project structure should follow SAP CAP standards:
+
+project-root
+├── app/
+│ └── purchaseorder-ui
+├── db/
+│ └── schema.cds
+├── srv/
+│ └── purchase-service.cds
+├── xs-security.json
+├── package.json
+└── mta.yaml
+
+Ensure the application can be deployed to SAP BTP and the database artifacts automatically deploy to SAP HANA Cloud.
+</UserInput>
+
+----------Response:----------
+```json
+{
+  "entities": [
+    {
+      "name": "PurchaseOrders",
+      "label": "Purchase Order",
+      "associations": [
+        {
+          "name": "Supplier",
+          "target": "Suppliers",
+          "multiplicity": "one"
+        }
+      ],
+      "labelPlural": "Purchase Orders"
+    },
+    {
+      "name": "Suppliers",
+      "label": "Supplier",
+      "associations": [],
+      "labelPlural": "Suppliers"
+    }
+  ],
+  "baseEntity": "PurchaseOrders",
+  "noListReportPage": false,
+  "objectPages": [
+    {
+      "entityType": "PurchaseOrders",
+      "tableSectionsAssociations": []
+    }
+  ],
+  "namespace": "purchaseOrderManagement",
+  "applicationName": "purchaseOrderApp",
+  "userInputKind": "DataModelFirst"
+}
+```
+2026-03-12T05:40:17.974Z [info] Step "switchBasedOnAppSkeleton": case 0 blocked! Evaluation details:
+ - JSONPath "$.model.applications[0].pages[0]" : [{"type":"ListReport","entityType":"PurchaseOrders"}]
+2026-03-12T05:40:17.974Z [info] Step "switchBasedOnAppSkeleton": case 1 blocked! Evaluation details:
+ - JSONPath "$.model.applications[0].pages[0].type" : ["ListReport"]
+2026-03-12T05:40:17.974Z [info] Step "switchBasedOnAppSkeleton": case 2 passed! Evaluation details:
+ - JSONPath "$.userInput.imageCount" : [0]
+2026-03-12T05:40:17.974Z [info] Step "runDataModelFirst": workflow "givenSkeletonExtractDataModelFirst" started
+"
+2026-03-12T05:40:22.895Z [info] 
+==========LLM call for step "extractEntitiesProperties":==========
+You help the user refining the DataModel for a Fiori Elements application described in the user input.
+
+The DataModel consists of the following entities and associations:
+- entity "PurchaseOrders" (with to-one association to "Suppliers")
+- entity "Suppliers"
+
+Your task is to find the properties for each entity.
+
+You must format your output as a JSON value that adheres to a given "JSON Schema" instance.
+
+"JSON Schema" is a declarative language that allows you to annotate and validate JSON documents.
+
+For example, the example "JSON Schema" instance {{"properties": {{"foo": {{"description": "a list of test words", "type": "array", "items": {{"type": "string"}}}}}}, "required": ["foo"]}}
+would match an object with one required property, "foo". The "type" property specifies "foo" must be an "array", and the "description" property semantically describes it as "a list of test words". The items within "foo" must be strings.
+Thus, the object {{"foo": ["bar", "baz"]}} is a well-formatted instance of this example "JSON Schema". The object {{"properties": {{"foo": ["bar", "baz"]}}}} is not well-formatted.
+
+Your output will be parsed and type-checked according to the provided schema instance, so make sure all fields in your output match the schema exactly and there are no trailing commas!
+
+Here is the JSON Schema instance your output must adhere to. Include the enclosing markdown codeblock:
+```json
+{
+  "type": "object",
+  "properties": {
+    "elements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "entityName": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "description": "camelCase, no spaces"
+          },
+          "type": {
+            "type": "string",
+            "description": "Allowed values: String(50), Boolean, Integer, Decimal, Double, Date, Time, DateTime, Timestamp; String length can vary - i.e. String(20)"
+          },
+          "key": {
+            "type": "boolean",
+            "description": "max. one optional key per entity, only if this element is a semantic key and can uniquely identify the instance"
+          },
+          "essentialElement": {
+            "type": "boolean",
+            "description": "'true' only if element is marked as essential'"
+          },
+          "additionalInfo": {
+            "type": "string",
+            "description": "All additional information from user input, e.g. user description, example values; also consider referenced parts in the user input"
+          }
+        },
+        "required": [
+          "entityName",
+          "name",
+          "type",
+          "additionalInfo"
+        ],
+        "additionalProperties": false
+      },
+      "description": "At least 5 realistic elements (unless explicitly specified)"
+    }
+  },
+  "required": [
+    "elements"
+  ],
+  "additionalProperties": false
+}
+```
+
+Output ONLY the json contents and try to be as accurate as comprehensive as possible.
+
+<UserInput>
+Generate a full-stack SAP CAP application for Purchase Order Management using SAP Build Code and SAP BTP.
+
+Application Requirements:
+
+Architecture:
+
+* Use SAP CAP (Node.js)
+* Use SAP HANA Cloud as the database
+* Use an HDI container for persistence
+* Expose services using OData V4
+* Deployable to SAP BTP Cloud Foundry
+
+Database Model:
+Create the following entities:
+
+1. PurchaseOrders
+
+* ID (integer,key)
+* supplierName (String)
+* productName (String)
+* quantity (Integer)
+* price (Decimal)
+* totalAmount (calculated = quantity * price)
+* status (String: Created, Approved, Rejected)
+* createdAt (Timestamp)
+
+2. Suppliers
+
+* ID (integer)
+* name (String)
+* email (String)
+* phone (String)
+
+Add an association:
+PurchaseOrders → Supplier
+
+Backend Service:
+Create a service called PurchaseOrderService exposing:
+
+* READ PurchaseOrders
+* CREATE PurchaseOrders
+* UPDATE PurchaseOrders
+* DELETE PurchaseOrders
+* READ Suppliers
+
+Authorization (Role-Based Access Control):
+Use XSUAA for authentication.
+
+Define roles:
+
+Admin
+
+* Full access
+* Can create, update, delete purchase orders
+* Can view suppliers
+
+Manager
+
+* Can approve or reject purchase orders
+* Can view purchase orders
+
+Employee
+
+* Can create purchase orders
+* Can only view their own purchase orders
+
+Create xs-security.json with scopes and role templates.
+
+Add authorization annotations in CDS services to enforce role-based access.
+
+Frontend:
+Generate a SAP Fiori Elements application with:
+
+List Report Page
+
+* Displays Purchase Orders
+* Filter by Supplier and Status
+
+Object Page
+
+* View Purchase Order details
+* Create new Purchase Orders
+* Edit existing Purchase Orders
+
+Role Behavior:
+Admin → full access UI
+Manager → approve/reject actions visible
+Employee → only create and view own orders
+
+Use SAP Fiori UI5 and connect it to PurchaseOrderService.
+
+Deployment:
+Include:
+
+* mta.yaml
+* xs-security.json
+* HANA HDI container configuration
+* service bindings for HANA and XSUAA
+
+The generated project structure should follow SAP CAP standards:
+
+project-root
+├── app/
+│ └── purchaseorder-ui
+├── db/
+│ └── schema.cds
+├── srv/
+│ └── purchase-service.cds
+├── xs-security.json
+├── package.json
+└── mta.yaml
+
+Ensure the application can be deployed to SAP BTP and the database artifacts automatically deploy to SAP HANA Cloud.
+</UserInput>
+
+----------Response:----------
+```json
+{
+  "elements": [
+    {
+      "entityName": "PurchaseOrders",
+      "name": "ID",
+      "type": "Integer",
+      "key": true,
+      "essentialElement": true,
+      "additionalInfo": "Primary key for PurchaseOrders"
+    },
+    {
+      "entityName": "PurchaseOrders",
+      "name": "supplierName",
+      "type": "String(50)",
+      "key": false,
+      "essentialElement": false,
+      "additionalInfo": "Name of the supplier associated with the purchase order"
+    },
+    {
+      "entityName": "PurchaseOrders",
+      "name": "productName",
+      "type": "String(50)",
+      "key": false,
+      "essentialElement": false,
+      "additionalInfo": "Name of the product in the purchase order"
+    },
+    {
+      "entityName": "PurchaseOrders",
+      "name": "quantity",
+      "type": "Integer",
+      "key": false,
+      "essentialElement": true,
+      "additionalInfo": "Quantity of the product ordered"
+    },
+    {
+      "entityName": "PurchaseOrders",
+      "name": "price",
+      "type": "Decimal",
+      "key": false,
+      "essentialElement": true,
+      "additionalInfo": "Price per unit of the product"
+    },
+    {
+      "entityName": "PurchaseOrders",
+      "name": "totalAmount",
+      "type": "Decimal",
+      "key": false,
+      "essentialElement": false,
+      "additionalInfo": "Calculated field: quantity * price"
+    },
+    {
+      "entityName": "PurchaseOrders",
+      "name": "status",
+      "type": "String(20)",
+      "key": false,
+      "essentialElement": true,
+      "additionalInfo": "Status of the purchase order: Created, Approved, Rejected"
+    },
+    {
+      "entityName": "PurchaseOrders",
+      "name": "createdAt",
+      "type": "Timestamp",
+      "key": false,
+      "essentialElement": true,
+      "additionalInfo": "Timestamp when the purchase order was created"
+    },
+    {
+      "entityName": "Suppliers",
+      "name": "ID",
+      "type": "Integer",
+      "key": true,
+      "essentialElement": true,
+      "additionalInfo": "Primary key for Suppliers"
+    },
+    {
+      "entityName": "Suppliers",
+      "name": "name",
+      "type": "String(50)",
+      "key": false,
+      "essentialElement": true,
+      "additionalInfo": "Name of the supplier"
+    },
+    {
+      "entityName": "Suppliers",
+      "name": "email",
+      "type": "String(50)",
+      "key": false,
+      "essentialElement": false,
+      "additionalInfo": "Email address of the supplier"
+    },
+    {
+      "entityName": "Suppliers",
+      "name": "phone",
+      "type": "String(20)",
+      "key": false,
+      "essentialElement": false,
+      "additionalInfo": "Phone number of the supplier"
+    }
+  ]
+}
+```
+2026-03-12T05:40:24.862Z [info] 
+==========LLM call for step "extractPropertyDetails":==========
+Here is a list of property names, each with the property description that was extracted from previous user input:
+
+PurchaseOrders_purchaseOrdersID: Primary key for PurchaseOrders
+PurchaseOrders_supplierName: Name of the supplier associated with the purchase order
+PurchaseOrders_productName: Name of the product in the purchase order
+PurchaseOrders_quantity: Quantity of the product ordered
+PurchaseOrders_price: Price per unit of the product
+PurchaseOrders_totalAmount: Calculated field: quantity * price
+PurchaseOrders_status: Status of the purchase order: Created, Approved, Rejected
+PurchaseOrders_createdAt: Timestamp when the purchase order was created
+Suppliers_suppliersID: Primary key for Suppliers
+Suppliers_name: Name of the supplier
+Suppliers_email: Email address of the supplier
+Suppliers_phone: Phone number of the supplier
+
+For each property analyze the description with respect to what property values can be expected.
+
+You must format your output as a JSON value that adheres to a given "JSON Schema" instance.
+
+"JSON Schema" is a declarative language that allows you to annotate and validate JSON documents.
+
+For example, the example "JSON Schema" instance {{"properties": {{"foo": {{"description": "a list of test words", "type": "array", "items": {{"type": "string"}}}}}}, "required": ["foo"]}}
+would match an object with one required property, "foo". The "type" property specifies "foo" must be an "array", and the "description" property semantically describes it as "a list of test words". The items within "foo" must be strings.
+Thus, the object {{"foo": ["bar", "baz"]}} is a well-formatted instance of this example "JSON Schema". The object {{"properties": {{"foo": ["bar", "baz"]}}}} is not well-formatted.
+
+Your output will be parsed and type-checked according to the provided schema instance, so make sure all fields in your output match the schema exactly and there are no trailing commas!
+
+Here is the JSON Schema instance your output must adhere to. Include the enclosing markdown codeblock:
+```json
+{
+  "type": "object",
+  "properties": {
+    "properties": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "hasFixedValuesList": {
+            "type": "boolean",
+            "description": "Only limited list of values expected, e.g. property is representing e.g. a type, status, category, unit, organization"
+          },
+          "values": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Specific property values mentioned as part of the description. Those could be possible values or example values. Don't make up or invent any values"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "properties"
+  ],
+  "additionalProperties": false
+}
+```
+
+Output ONLY the json contents and try to be as accurate as comprehensive as possible.
+
+----------Response:----------
+```json
+{
+  "properties": [
+    {
+      "name": "PurchaseOrders_purchaseOrdersID",
+      "hasFixedValuesList": false,
+      "values": []
+    },
+    {
+      "name": "PurchaseOrders_supplierName",
+      "hasFixedValuesList": false,
+      "values": []
+    },
+    {
+      "name": "PurchaseOrders_productName",
+      "hasFixedValuesList": false,
+      "values": []
+    },
+    {
+      "name": "PurchaseOrders_quantity",
+      "hasFixedValuesList": false,
+      "values": []
+    },
+    {
+      "name": "PurchaseOrders_price",
+      "hasFixedValuesList": false,
+      "values": []
+    },
+    {
+      "name": "PurchaseOrders_totalAmount",
+      "hasFixedValuesList": false,
+      "values": []
+    },
+    {
+      "name": "PurchaseOrders_status",
+      "hasFixedValuesList": true,
+      "values": ["Created", "Approved", "Rejected"]
+    },
+    {
+      "name": "PurchaseOrders_createdAt",
+      "hasFixedValuesList": false,
+      "values": []
+    },
+    {
+      "name": "Suppliers_suppliersID",
+      "hasFixedValuesList": false,
+      "values": []
+    },
+    {
+      "name": "Suppliers_name",
+      "hasFixedValuesList": false,
+      "values": []
+    },
+    {
+      "name": "Suppliers_email",
+      "hasFixedValuesList": false,
+      "values": []
+    },
+    {
+      "name": "Suppliers_phone",
+      "hasFixedValuesList": false,
+      "values": []
+    }
+  ]
+}
+```
+2026-03-12T05:40:24.863Z [info] Step "switchSimpleOrComplexApp": case 0 blocked! Evaluation details:
+ - JSONPath "$.model.applications[0].pages[2]" : []
+ - JSONPath "$.userInput.lineCount" : [113]
+2026-03-12T05:40:24.863Z [info] Step "switchSimpleOrComplexApp": no condition met - running default steps
+2026-03-12T05:40:24.863Z [info] Step "runFlowForComplexApp": workflow "givenSkeletonExtractComplexApp" started
+"
+2026-03-12T05:40:28.115Z [info] 
+==========LLM call for classifier:==========
+The user input below describes a Fiori Elements application with a ListReport page and multiple ObjectPages.
+ListReport page shows the data of the specific business object as a list or table. ObjectPage shows details of a specific business object instance.
+Your task is to classify the lines based on the same business object representation to the following categories, one line can refer only to a single category:
+ - LIST_REPORT_PURCHASEORDERS: line describes the ListReport page for "PurchaseOrders"
+ - OBJECT_PAGE_PURCHASEORDERS: line describes the ObjectPage for "PurchaseOrders"
+ - NONE: line is not describing any ListReport page or ObjectPage
+
+Return your findings as csv file with columns "lineContent" and "category"!
+
+<UserInput>
+Generate a full-stack SAP CAP application for Purchase Order Management using SAP Build Code and SAP BTP.
+
+Application Requirements:
+
+Architecture:
+
+* Use SAP CAP (Node.js)
+* Use SAP HANA Cloud as the database
+* Use an HDI container for persistence
+* Expose services using OData V4
+* Deployable to SAP BTP Cloud Foundry
+
+Database Model:
+Create the following entities:
+
+1. PurchaseOrders
+
+* ID (integer,key)
+* supplierName (String)
+* productName (String)
+* quantity (Integer)
+* price (Decimal)
+* totalAmount (calculated = quantity * price)
+* status (String: Created, Approved, Rejected)
+* createdAt (Timestamp)
+
+2. Suppliers
+
+* ID (integer)
+* name (String)
+* email (String)
+* phone (String)
+
+Add an association:
+PurchaseOrders → Supplier
+
+Backend Service:
+Create a service called PurchaseOrderService exposing:
+
+* READ PurchaseOrders
+* CREATE PurchaseOrders
+* UPDATE PurchaseOrders
+* DELETE PurchaseOrders
+* READ Suppliers
+
+Authorization (Role-Based Access Control):
+Use XSUAA for authentication.
+
+Define roles:
+
+Admin
+
+* Full access
+* Can create, update, delete purchase orders
+* Can view suppliers
+
+Manager
+
+* Can approve or reject purchase orders
+* Can view purchase orders
+
+Employee
+
+* Can create purchase orders
+* Can only view their own purchase orders
+
+Create xs-security.json with scopes and role templates.
+
+Add authorization annotations in CDS services to enforce role-based access.
+
+Frontend:
+Generate a SAP Fiori Elements application with:
+
+List Report Page
+
+* Displays Purchase Orders
+* Filter by Supplier and Status
+
+Object Page
+
+* View Purchase Order details
+* Create new Purchase Orders
+* Edit existing Purchase Orders
+
+Role Behavior:
+Admin → full access UI
+Manager → approve/reject actions visible
+Employee → only create and view own orders
+
+Use SAP Fiori UI5 and connect it to PurchaseOrderService.
+
+Deployment:
+Include:
+
+* mta.yaml
+* xs-security.json
+* HANA HDI container configuration
+* service bindings for HANA and XSUAA
+
+The generated project structure should follow SAP CAP standards:
+
+project-root
+├── app/
+│ └── purchaseorder-ui
+├── db/
+│ └── schema.cds
+├── srv/
+│ └── purchase-service.cds
+├── xs-security.json
+├── package.json
+└── mta.yaml
+
+Ensure the application can be deployed to SAP BTP and the database artifacts automatically deploy to SAP HANA Cloud.
+</UserInput>
+
+----------Response:----------
+```csv
+lineContent,category
+"Generate a full-stack SAP CAP application for Purchase Order Management using SAP Build Code and SAP BTP.",NONE
+"Application Requirements:",NONE
+"Architecture:",NONE
+"* Use SAP CAP (Node.js)",NONE
+"* Use SAP HANA Cloud as the database",NONE
+"* Use an HDI container for persistence",NONE
+"* Expose services using OData V4",NONE
+"* Deployable to SAP BTP Cloud Foundry",NONE
+"Database Model:",NONE
+"Create the following entities:",NONE
+"1. PurchaseOrders",NONE
+"* ID (integer,key)",NONE
+"* supplierName (String)",NONE
+"* productName (String)",NONE
+"* quantity (Integer)",NONE
+"* price (Decimal)",NONE
+"* totalAmount (calculated = quantity * price)",NONE
+"* status (String: Created, Approved, Rejected)",NONE
+"* createdAt (Timestamp)",NONE
+"2. Suppliers",NONE
+"* ID (integer)",NONE
+"* name (String)",NONE
+"* email (String)",NONE
+"* phone (String)",NONE
+"Add an association:",NONE
+"PurchaseOrders → Supplier",NONE
+"Backend Service:",NONE
+"Create a service called PurchaseOrderService exposing:",NONE
+"* READ PurchaseOrders",NONE
+"* CREATE PurchaseOrders",NONE
+"* UPDATE PurchaseOrders",NONE
+"* DELETE PurchaseOrders",NONE
+"* READ Suppliers",NONE
+"Authorization (Role-Based Access Control):",NONE
+"Use XSUAA for authentication.",NONE
+"Define roles:",NONE
+"Admin",NONE
+"* Full access",NONE
+"* Can create, update, delete purchase orders",NONE
+"* Can view suppliers",NONE
+"Manager",NONE
+"* Can approve or reject purchase orders",NONE
+"* Can view purchase orders",NONE
+"Employee",NONE
+"* Can create purchase orders",NONE
+"* Can only view their own purchase orders",NONE
+"Create xs-security.json with scopes and role templates.",NONE
+"Add authorization annotations in CDS services to enforce role-based access.",NONE
+"Frontend:",NONE
+"Generate a SAP Fiori Elements application with:",NONE
+"List Report Page",NONE
+"* Displays Purchase Orders",LIST_REPORT_PURCHASEORDERS
+"* Filter by Supplier and Status",LIST_REPORT_PURCHASEORDERS
+"Object Page",NONE
+"* View Purchase Order details",OBJECT_PAGE_PURCHASEORDERS
+"* Create new Purchase Orders",OBJECT_PAGE_PURCHASEORDERS
+"* Edit existing Purchase Orders",OBJECT_PAGE_PURCHASEORDERS
+"Role Behavior:",NONE
+"Admin → full access UI",NONE
+"Manager → approve/reject actions visible",NONE
+"Employee → only create and view own orders",NONE
+"Use SAP Fiori UI5 and connect it to PurchaseOrderService.",NONE
+"Deployment:",NONE
+"Include:",NONE
+"* mta.yaml",NONE
+"* xs-security.json",NONE
+"* HANA HDI container configuration",NONE
+"* service bindings for HANA and XSUAA",NONE
+"The generated project structure should follow SAP CAP standards:",NONE
+"project-root",NONE
+"├── app/",NONE
+"│ └── purchaseorder-ui",NONE
+"├── db/",NONE
+"│ └── schema.cds",NONE
+"├── srv/",NONE
+"│ └── purchase-service.cds",NONE
+"├── xs-security.json",NONE
+"├── package.json",NONE
+"└── mta.yaml",NONE
+"Ensure the application can be deployed to SAP BTP and the database artifacts automatically deploy to SAP HANA Cloud.",NONE
+```
+2026-03-12T05:40:28.116Z [info] Step "loopOverPages": looping over 2 entries
+"
+2026-03-12T05:40:28.116Z [info] Step "loopOverPages" index 0: pageType=ListReport, entityType=PurchaseOrders
+2026-03-12T05:40:28.117Z [info] Step "ifListReportPage": case 0 passed! Evaluation details:
+ - Variable "pageType" : "ListReport"
+2026-03-12T05:40:29.333Z [info] 
+==========LLM call for step "extractListReport":==========
+A Fiori Elements Application has the following pages:
+ - ListReport page for "PurchaseOrders"
+ - ObjectPage for "PurchaseOrders"
+
+Available entities with their associations and elements are:
+Entity "PurchaseOrders"
+   Properties:
+       purchaseOrdersID: Primary key for PurchaseOrders
+       supplierName: Name of the supplier associated with the purchase order
+       productName: Name of the product in the purchase order
+       quantity: Quantity of the product ordered
+       price: Price per unit of the product
+       totalAmount: Calculated field: quantity * price
+       status: Status of the purchase order: Created, Approved, Rejected
+       createdAt: Timestamp when the purchase order was created
+   Associations:
+       Supplier: association to single entity Suppliers
+Entity "Suppliers"
+   Properties:
+       suppliersID: Primary key for Suppliers
+       name: Name of the supplier
+       email: Email address of the supplier
+       phone: Phone number of the supplier
+
+The user input below describes the details of the ListReport page (i.e. its filters, tables or views with their columns).
+
+Your task is to help the user defining the ListReport page.
+
+You must format your output as a JSON value that adheres to a given "JSON Schema" instance.
+
+"JSON Schema" is a declarative language that allows you to annotate and validate JSON documents.
+
+For example, the example "JSON Schema" instance {{"properties": {{"foo": {{"description": "a list of test words", "type": "array", "items": {{"type": "string"}}}}}}, "required": ["foo"]}}
+would match an object with one required property, "foo". The "type" property specifies "foo" must be an "array", and the "description" property semantically describes it as "a list of test words". The items within "foo" must be strings.
+Thus, the object {{"foo": ["bar", "baz"]}} is a well-formatted instance of this example "JSON Schema". The object {{"properties": {{"foo": ["bar", "baz"]}}}} is not well-formatted.
+
+Your output will be parsed and type-checked according to the provided schema instance, so make sure all fields in your output match the schema exactly and there are no trailing commas!
+
+Here is the JSON Schema instance your output must adhere to. Include the enclosing markdown codeblock:
+```json
+{
+  "type": "object",
+  "properties": {
+    "loadDataOnAppLaunch": {
+      "type": "string",
+      "enum": [
+        "Auto",
+        "Disabled",
+        "Enabled"
+      ],
+      "description": "'Auto': no explicit user input to load the data after start or an explicit user input to set InitialLoad for table to Auto; 'Disabled': An initial load of data does not occur at app start and the user has to actively click the Go button;  'Enabled': An initial load of data occurs automatically after start  (list is visible without pressing the GO Button)."
+    },
+    "tables": {
+      "type": "array",
+      "description": "tables (views) expected in user input",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "baseEntityType": {
+            "type": "string",
+            "description": "base entity type for the table"
+          },
+          "columns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "propertyPaths for columns"
+          }
+        },
+        "required": [
+          "title",
+          "baseEntityType",
+          "columns"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "filters": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "propertyPaths for filters specified in user input. If not specified, empty array"
+    }
+  },
+  "required": [
+    "tables"
+  ],
+  "additionalProperties": false
+}
+```
+
+Output ONLY the json contents and try to be as accurate as comprehensive as possible.
+
+<UserInput>
+Generate a full-stack SAP CAP application for Purchase Order Management using SAP Build Code and SAP BTP.
+Application Requirements:
+Architecture:
+* Use SAP CAP (Node.js)
+* Use SAP HANA Cloud as the database
+* Use an HDI container for persistence
+* Expose services using OData V4
+* Deployable to SAP BTP Cloud Foundry
+Database Model:
+Create the following entities:
+1. PurchaseOrders
+"* ID (integer,key)"
+* supplierName (String)
+* productName (String)
+* quantity (Integer)
+* price (Decimal)
+* totalAmount (calculated = quantity * price)
+"* status (String: Created, Approved, Rejected)"
+* createdAt (Timestamp)
+2. Suppliers
+* ID (integer)
+* name (String)
+* email (String)
+* phone (String)
+Add an association:
+PurchaseOrders → Supplier
+Backend Service:
+Create a service called PurchaseOrderService exposing:
+* READ PurchaseOrders
+* CREATE PurchaseOrders
+* UPDATE PurchaseOrders
+* DELETE PurchaseOrders
+* READ Suppliers
+Authorization (Role-Based Access Control):
+Use XSUAA for authentication.
+Define roles:
+Admin
+* Full access
+"* Can create, update, delete purchase orders"
+* Can view suppliers
+Manager
+* Can approve or reject purchase orders
+* Can view purchase orders
+Employee
+* Can create purchase orders
+* Can only view their own purchase orders
+Create xs-security.json with scopes and role templates.
+Add authorization annotations in CDS services to enforce role-based access.
+Frontend:
+Generate a SAP Fiori Elements application with:
+List Report Page
+* Displays Purchase Orders
+* Filter by Supplier and Status
+Object Page
+</UserInput>
+
+----------Response:----------
+```json
+{
+  "loadDataOnAppLaunch": "Enabled",
+  "tables": [
+    {
+      "title": "Purchase Orders",
+      "id": "purchaseOrdersTable",
+      "baseEntityType": "PurchaseOrders",
+      "columns": [
+        "purchaseOrdersID",
+        "supplierName",
+        "productName",
+        "quantity",
+        "price",
+        "totalAmount",
+        "status",
+        "createdAt"
+      ]
+    }
+  ],
+  "filters": [
+    "supplierName",
+    "status"
+  ]
+}
+```
+2026-03-12T05:40:29.335Z [info] Step "loopOverPages" index 1: pageType=ObjectPage, entityType=PurchaseOrders
+2026-03-12T05:40:29.335Z [info] Step "ifListReportPage": case 0 blocked! Evaluation details:
+ - Variable "pageType" : "ObjectPage"
+2026-03-12T05:40:29.335Z [info] Step "ifListReportPage": no condition met - running default steps
+2026-03-12T05:40:30.690Z [info] 
+==========LLM call for step "extractSingleObjectPageOfMany":==========
+The user input below describes a Fiori Elements Application with the following pages:
+ - ListReport page for "PurchaseOrders"
+ - ObjectPage for "PurchaseOrders"
+
+Your task is to find the details of the ObjectPage for "PurchaseOrders".
+The base entity of the ObjectPage is PurchaseOrders.
+This ObjectPage can contain tabs and/or sections which in turn contain tables and fields.
+
+The underlying data model allows the following propertyPaths:
+ - purchaseOrdersID: ID (of Purchase Order)
+ - supplierName: Supplier Name (of Purchase Order)
+ - productName: Product Name (of Purchase Order)
+ - quantity: Quantity (of Purchase Order)
+ - price: Price (of Purchase Order)
+ - totalAmount: Total Amount (of Purchase Order)
+ - status: Status (of Purchase Order)
+ - createdAt: Created At (of Purchase Order)
+ - Supplier/suppliersID: ID (of single associated Supplier)
+ - Supplier/name: Name (of single associated Supplier)
+ - Supplier/email: Email (of single associated Supplier)
+ - Supplier/phone: Phone (of single associated Supplier)
+
+You must format your output as a JSON value that adheres to a given "JSON Schema" instance.
+
+"JSON Schema" is a declarative language that allows you to annotate and validate JSON documents.
+
+For example, the example "JSON Schema" instance {{"properties": {{"foo": {{"description": "a list of test words", "type": "array", "items": {{"type": "string"}}}}}}, "required": ["foo"]}}
+would match an object with one required property, "foo". The "type" property specifies "foo" must be an "array", and the "description" property semantically describes it as "a list of test words". The items within "foo" must be strings.
+Thus, the object {{"foo": ["bar", "baz"]}} is a well-formatted instance of this example "JSON Schema". The object {{"properties": {{"foo": ["bar", "baz"]}}}} is not well-formatted.
+
+Your output will be parsed and type-checked according to the provided schema instance, so make sure all fields in your output match the schema exactly and there are no trailing commas!
+
+Here is the JSON Schema instance your output must adhere to. Include the enclosing markdown codeblock:
+```json
+{
+  "type": "object",
+  "properties": {
+    "sections": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "isTableSection": {
+            "type": "boolean",
+            "description": "if true, 'fields' represent columns of the table section and propertyPaths need to start with 1:n association"
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "propertyPath"
+          }
+        },
+        "required": [
+          "title",
+          "id",
+          "fields"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "tabs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "subsections": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "list of sections ids relevant for the tab"
+          }
+        },
+        "required": [
+          "title",
+          "id",
+          "subsections"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "sections",
+    "tabs"
+  ],
+  "additionalProperties": false
+}
+```
+
+Output ONLY the json contents and try to be as accurate as comprehensive as possible.
+
+<UserInput>
+* View Purchase Order details
+* Create new Purchase Orders
+* Edit existing Purchase Orders
+Role Behavior:
+Admin → full access UI
+Manager → approve/reject actions visible
+Employee → only create and view own orders
+Use SAP Fiori UI5 and connect it to PurchaseOrderService.
+Deployment:
+Include:
+* mta.yaml
+* xs-security.json
+* HANA HDI container configuration
+* service bindings for HANA and XSUAA
+The generated project structure should follow SAP CAP standards:
+project-root
+├── app/
+│ └── purchaseorder-ui
+├── db/
+│ └── schema.cds
+├── srv/
+│ └── purchase-service.cds
+├── xs-security.json
+├── package.json
+└── mta.yaml
+Ensure the application can be deployed to SAP BTP and the database artifacts automatically deploy to SAP HANA Cloud.
+</UserInput>
+
+----------Response:----------
+```json
+{
+  "sections": [
+    {
+      "title": "Purchase Order Details",
+      "id": "purchaseOrderDetails",
+      "isTableSection": false,
+      "fields": [
+        "purchaseOrdersID",
+        "supplierName",
+        "productName",
+        "quantity",
+        "price",
+        "totalAmount",
+        "status",
+        "createdAt"
+      ]
+    },
+    {
+      "title": "Supplier Information",
+      "id": "supplierInformation",
+      "isTableSection": false,
+      "fields": [
+        "Supplier/suppliersID",
+        "Supplier/name",
+        "Supplier/email",
+        "Supplier/phone"
+      ]
+    }
+  ],
+  "tabs": [
+    {
+      "title": "Overview",
+      "id": "overviewTab",
+      "subsections": [
+        "purchaseOrderDetails",
+        "supplierInformation"
+      ]
+    }
+  ]
+}
+```
+2026-03-12T05:40:30.691Z [info] Step "ifCodeListsPresent": case 0 passed! Evaluation details:
+ - JSONPath "$.model.entities[*].elements[*].values[*]" : ["Created","Approved","Rejected"]
+2026-03-12T05:40:32.508Z [info] 
+==========LLM call for step "extractColors":==========
+You help the user creating a Fiori Elements application based on user input describing such an application.
+Your task is to determine whether the entity properties can be considered good and bad in most contexts or are usually neutral. When in doubt, set to neutral.
+
+These are the entity properties and their values:
+Entity: PurchaseOrders, Property: status, Values: Created, Approved, Rejected
+
+If the properties can be considered good and bad, the allowed values for their criticality and the associated colors are:
+   negative: red
+   critical: yellow or orange
+   positive: green
+   neutral:  grey
+
+You must format your output as a JSON value that adheres to a given "JSON Schema" instance.
+
+"JSON Schema" is a declarative language that allows you to annotate and validate JSON documents.
+
+For example, the example "JSON Schema" instance {{"properties": {{"foo": {{"description": "a list of test words", "type": "array", "items": {{"type": "string"}}}}}}, "required": ["foo"]}}
+would match an object with one required property, "foo". The "type" property specifies "foo" must be an "array", and the "description" property semantically describes it as "a list of test words". The items within "foo" must be strings.
+Thus, the object {{"foo": ["bar", "baz"]}} is a well-formatted instance of this example "JSON Schema". The object {{"properties": {{"foo": ["bar", "baz"]}}}} is not well-formatted.
+
+Your output will be parsed and type-checked according to the provided schema instance, so make sure all fields in your output match the schema exactly and there are no trailing commas!
+
+Here is the JSON Schema instance your output must adhere to. Include the enclosing markdown codeblock:
+```json
+{
+  "type": "object",
+  "properties": {
+    "properties": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "entity": {
+            "type": "string"
+          },
+          "property": {
+            "type": "string"
+          },
+          "hasColorsOrCriticality": {
+            "type": "boolean",
+            "description": "true if the given values of the property can be good or bad, false if they are usually neutral"
+          },
+          "reason": {
+            "type": "string",
+            "description": "detailed explanation why you set hasColorsOrCriticality to this value"
+          },
+          "mapping": {
+            "type": "array",
+            "description": "empty if 'hasColorsOrCriticality' is false",
+            "items": {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "description": "value of property"
+                },
+                "colorOrCriticality": {
+                  "type": "string",
+                  "description": "color or criticality associated with value"
+                },
+                "reason": {
+                  "type": "string",
+                  "description": "detailed explanation why you set ColorOrCriticality to this value"
+                }
+              },
+              "required": [
+                "value",
+                "colorOrCriticality"
+              ]
+            }
+          }
+        },
+        "required": [
+          "entity",
+          "property"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "properties"
+  ],
+  "additionalProperties": false
+}
+```
+
+Output ONLY the json contents and try to be as accurate as comprehensive as possible.
+
+<UserInput>
+Generate a full-stack SAP CAP application for Purchase Order Management using SAP Build Code and SAP BTP.
+
+Application Requirements:
+
+Architecture:
+
+* Use SAP CAP (Node.js)
+* Use SAP HANA Cloud as the database
+* Use an HDI container for persistence
+* Expose services using OData V4
+* Deployable to SAP BTP Cloud Foundry
+
+Database Model:
+Create the following entities:
+
+1. PurchaseOrders
+
+* ID (integer,key)
+* supplierName (String)
+* productName (String)
+* quantity (Integer)
+* price (Decimal)
+* totalAmount (calculated = quantity * price)
+* status (String: Created, Approved, Rejected)
+* createdAt (Timestamp)
+
+2. Suppliers
+
+* ID (integer)
+* name (String)
+* email (String)
+* phone (String)
+
+Add an association:
+PurchaseOrders → Supplier
+
+Backend Service:
+Create a service called PurchaseOrderService exposing:
+
+* READ PurchaseOrders
+* CREATE PurchaseOrders
+* UPDATE PurchaseOrders
+* DELETE PurchaseOrders
+* READ Suppliers
+
+Authorization (Role-Based Access Control):
+Use XSUAA for authentication.
+
+Define roles:
+
+Admin
+
+* Full access
+* Can create, update, delete purchase orders
+* Can view suppliers
+
+Manager
+
+* Can approve or reject purchase orders
+* Can view purchase orders
+
+Employee
+
+* Can create purchase orders
+* Can only view their own purchase orders
+
+Create xs-security.json with scopes and role templates.
+
+Add authorization annotations in CDS services to enforce role-based access.
+
+Frontend:
+Generate a SAP Fiori Elements application with:
+
+List Report Page
+
+* Displays Purchase Orders
+* Filter by Supplier and Status
+
+Object Page
+
+* View Purchase Order details
+* Create new Purchase Orders
+* Edit existing Purchase Orders
+
+Role Behavior:
+Admin → full access UI
+Manager → approve/reject actions visible
+Employee → only create and view own orders
+
+Use SAP Fiori UI5 and connect it to PurchaseOrderService.
+
+Deployment:
+Include:
+
+* mta.yaml
+* xs-security.json
+* HANA HDI container configuration
+* service bindings for HANA and XSUAA
+
+The generated project structure should follow SAP CAP standards:
+
+project-root
+├── app/
+│ └── purchaseorder-ui
+├── db/
+│ └── schema.cds
+├── srv/
+│ └── purchase-service.cds
+├── xs-security.json
+├── package.json
+└── mta.yaml
+
+Ensure the application can be deployed to SAP BTP and the database artifacts automatically deploy to SAP HANA Cloud.
+</UserInput>
+
+
+----------Response:----------
+```json
+{
+  "properties": [
+    {
+      "entity": "PurchaseOrders",
+      "property": "status",
+      "hasColorsOrCriticality": true,
+      "reason": "The 'status' property of a purchase order can be considered good or bad based on its values. 'Approved' is generally positive, 'Rejected' is negative, and 'Created' can be seen as neutral or critical depending on the context.",
+      "mapping": [
+        {
+          "value": "Created",
+          "colorOrCriticality": "neutral",
+          "reason": "'Created' is a neutral state indicating the order has been initiated but not yet processed."
+        },
+        {
+          "value": "Approved",
+          "colorOrCriticality": "positive",
+          "reason": "'Approved' is a positive state indicating the order has been accepted and is ready for fulfillment."
+        },
+        {
+          "value": "Rejected",
+          "colorOrCriticality": "negative",
+          "reason": "'Rejected' is a negative state indicating the order has been declined and will not be processed."
+        }
+      ]
+    }
+  ]
+}
+```
+2026-03-12T05:40:32.510Z [info] 2/8: Build CDS files
+2026-03-12T05:40:32.527Z [info] 3/8: Checking staging project root folder "&#x2F;home&#x2F;user&#x2F;projects&#x2F;PO"
+2026-03-12T05:40:32.669Z [info] 4/8: Generating mock data
+2026-03-12T05:40:34.998Z [info] 
+==========LLM call for data generation:==========
+
+For the following list of entities, create data for the empty CSV files.
+Entity "PurchaseOrders" - Properties:
+    purchaseOrdersID: Integer, Primary key for PurchaseOrders
+    supplierName: String(50), Name of the supplier associated with the purchase order
+    productName: String(50), Name of the product in the purchase order
+    quantity: Integer, Quantity of the product ordered
+    price: Decimal, Price per unit of the product
+    totalAmount: Decimal, Calculated field: quantity * price
+    status: String(20), Status of the purchase order: Created, Approved, Rejected
+    createdAt: Timestamp, Timestamp when the purchase order was created
+    Supplier_suppliersID: Integer, suppliersID of associated Suppliers
+
+Entity "Suppliers" - Properties:
+    suppliersID: Integer, Primary key for Suppliers
+    name: String(50), Name of the supplier
+    email: String(50), Email address of the supplier
+    phone: String(20), Phone number of the supplier
+
+Empty CSV files in json format (only generate content for these files!):
+{"PurchaseOrders.csv":"purchaseOrdersID;supplierName;productName;quantity;price;totalAmount;status;createdAt;Supplier_suppliersID","Suppliers.csv":"suppliersID;name;email;phone"}
+
+Rules:
+    - Take over the given header line, do not invent new columns!
+    - For a given file, add rows, add '\n' characters before each row but don't break the JSON string
+    - Do not generate rows with same key values, they must be unique!
+    - Make sure that associations match, i.e. a field containing "Name of the associated Customer" must contain an existing Name of entity Customer
+    - Always use ";" as a delimiter in CSV files
+    - The result must be proper JSON format so it can be parsed, don't break JSON strings within, don't add quotes around values.
+    - Create about 5 rows for the first csv, 7 for the second and so on
+    - All values must be realistic with meaningful content, e.g. 'Laptop Screen' and not just placeholder values with incremented numbers like 'Product 1', 'Product 2' etc.
+
+Use format for values:
+  Integer, Double: only numbers, no special symbols
+  String(50): string no longer than 50 characters
+  Decimal(3,2): 1.23
+
+For the following fields, use only the supplied allowed values (as they are, don't insert spaces or change case):
+- status (of PurchaseOrders): Created, Approved, Rejected
+
+Example output (Do NOT include in output!):
+```json
+{"Blogs":"blogID;title;description;createdDateTime;views\nBlog1;Tech Blog;A blog about the latest technology trends.;2023-06-27T14:52:23Z;1000\nBlog2;Fashion Blog;Explore the world of fashion and style.;2023-06-27T14:52:23Z;500","Posts":"postID;title;content;publishDate;likes;comments;blogID\n1;The Future of Artificial Intelligence;Artificial intelligence is shaping the future of technology.;2023-06-27;50;10;Blog1
+2;Summer Fashion Trends;Discover the hottest fashion trends for the summer season.;2023-06-27;100;20;Blog2\n3;Must-Have Accessories;10 must-have accessories for the upcoming season;2023-06-27;100;20;Blog2"}
+```
+Output ONLY the json contents for the csv files and try to be as accurate as possible.
+
+
+
+----------Response:----------
+```json
+{"PurchaseOrders.csv":"purchaseOrdersID;supplierName;productName;quantity;price;totalAmount;status;createdAt;Supplier_suppliersID\n1;Tech Supplies Co.;Laptop;10;799.99;7999.90;Created;2023-10-01T10:15:30Z;1\n2;Office Essentials Ltd.;Office Chair;5;120.50;602.50;Approved;2023-10-02T11:20:45Z;2\n3;Gadget World;Smartphone;20;299.99;5999.80;Rejected;2023-10-03T09:30:00Z;3\n4;Tech Supplies Co.;Monitor;15;150.00;2250.00;Approved;2023-10-04T14:45:15Z;1\n5;Office Essentials Ltd.;Desk Lamp;30;25.75;772.50;Created;2023-10-05T16:00:00Z;2","Suppliers.csv":"suppliersID;name;email;phone\n1;Tech Supplies Co.;contact@techsupplies.com;123-456-7890\n2;Office Essentials Ltd.;info@officeessentials.com;234-567-8901\n3;Gadget World;support@gadgetworld.com;345-678-9012\n4;Furniture Hub;sales@furniturehub.com;456-789-0123\n5;Stationery Plus;hello@stationeryplus.com;567-890-1234\n6;Electronics Depot;service@electronicsdepot.com;678-901-2345\n7;Home Office Solutions;contact@homeofficesolutions.com;789-012-3456"}
+```
+2026-03-12T05:40:35.001Z [info] 5/8: Initializing CAP project
+2026-03-12T05:40:35.413Z [info] 6/8: Copying files to CAP project
+2026-03-12T05:40:35.419Z [info] 7/8: Generating applications
+2026-03-12T05:40:56.374Z [info] 8/8: Installing node module dependencies

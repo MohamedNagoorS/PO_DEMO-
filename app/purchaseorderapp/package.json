@@ -1,0 +1,22 @@
+{
+  "name": "purchaseorderapp",
+  "version": "0.0.1",
+  "description": "AI generated App purchaseorderapp",
+  "keywords": [
+    "ui5",
+    "openui5",
+    "sapui5"
+  ],
+  "main": "webapp/index.html",
+  "dependencies": {},
+  "devDependencies": {
+    "@ui5/cli": "^4.0.33",
+    "@sap/ux-ui5-tooling": "1"
+  },
+  "scripts": {
+    
+    "build": "ui5 build --clean-dest",
+    "start": "ui5 serve -o index.html",
+    "deploy-config": "npx -p @sap/ux-ui5-tooling fiori add deploy-config cf"
+  }
+}

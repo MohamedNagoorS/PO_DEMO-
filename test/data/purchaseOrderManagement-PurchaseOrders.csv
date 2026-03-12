@@ -1,0 +1,6 @@
+ID;purchaseOrdersID;supplierName;productName;quantity;price;totalAmount;status_code;createdAt;Supplier_ID
+cd39ccc4-0e3d-4493-b9a5-2bab58113f42;1;Tech Supplies Co.;Laptop;10;799.99;7999.90;Created;;d70d10d2-8472-4d3a-8cab-538696662665
+57802e69-b4b3-4205-9427-4ff4f4feabf0;2;Office Essentials Ltd.;Office Chair;5;120.50;602.50;Approved;;1539f0b6-1bf4-4ebd-bf0b-fa799a4822a1
+d078f381-3347-4063-a3c0-3d56a4ad1ebf;3;Gadget World;Smartphone;20;299.99;5999.80;Rejected;;4fc15a68-e666-401b-8ae9-789fae5b879f
+26d57a51-5b7c-471f-8685-6b30d57f9342;4;Tech Supplies Co.;Monitor;15;150.00;2250.00;Approved;;d70d10d2-8472-4d3a-8cab-538696662665
+5e68e4d5-8ae1-47d6-8049-95c4c025a0d9;5;Office Essentials Ltd.;Desk Lamp;30;25.75;772.50;Created;;1539f0b6-1bf4-4ebd-bf0b-fa799a4822a1
